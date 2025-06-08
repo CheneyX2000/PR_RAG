@@ -1,0 +1,45 @@
+# pyproject.toml
+[project]
+dependencies = [
+    # core struct
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    
+    # RAG framework
+    "langchain>=0.1.0",
+    
+    # model management
+    "litellm>=1.0.0",           # unify LLM interface
+    "sentence-transformers>=2.3.0",  # embedding
+    
+    # db
+    "pgvector>=0.2.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
+    "asyncpg>=0.29.0",
+    
+    # doc processing
+    "unstructured[all-docs]>=0.11.0",
+    "pypdf>=3.17.0",
+    
+    # utilities
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.25.0",
+    "redis>=5.0.0",
+    
+    # surveillance
+    "prometheus-client>=0.19.0",
+    "structlog>=24.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.12.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+    "deepeval>=0.20.0",  # RAG test
+]
