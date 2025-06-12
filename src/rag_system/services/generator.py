@@ -9,6 +9,7 @@ from ..services.retriever import RetrievedChunk
 from ..core.config import settings
 from ..utils.monitoring import logger
 from ..utils.exceptions import GenerationError
+from ..utils.circuit_breaker import CircuitBreakers, CircuitBreakerError, create_circuit_breaker
 
 
 @dataclass
@@ -52,6 +53,24 @@ class GeneratorService:
                 "provider": "anthropic"
             }
         }
+        
+        # Create circuit breakers for different providers
+        self.circuit_breakers = {
+            "openai": CircuitBreakers.openai,
+            "anthropic": create_circuit_breaker(
+                name="anthropic",
+                failure_threshold=3,
+                recovery_timeout=60,
+                timeout=30.0
+            ),
+            "default": CircuitBreakers.external_api
+        }
+    
+    def _get_circuit_breaker(self, model_name: str):
+        """Get the appropriate circuit breaker for a model"""
+        config = self.model_configs.get(model_name, {})
+        provider = config.get("provider", "default")
+        return self.circuit_breakers.get(provider, self.circuit_breakers["default"])
     
     def _format_context(self, chunks: List[RetrievedChunk]) -> str:
         """Format retrieved chunks into context string"""
@@ -90,6 +109,10 @@ Please provide a comprehensive answer based on the context above. If the context
         
         return messages
     
+    async def _call_llm(self, **kwargs):
+        """Make the actual LLM API call"""
+        return await acompletion(**kwargs)
+    
     async def generate(
         self,
         query: str,
@@ -114,6 +137,7 @@ Please provide a comprehensive answer based on the context above. If the context
             Generated response with metadata
         """
         model_name = model_name or settings.default_llm_model
+        circuit_breaker = self._get_circuit_breaker(model_name)
         
         try:
             # Format context
@@ -142,8 +166,11 @@ Please provide a comprehensive answer based on the context above. If the context
                 temperature=completion_params["temperature"]
             )
             
-            # Call LLM
-            response = await acompletion(**completion_params)
+            # Call LLM with circuit breaker protection
+            response = await circuit_breaker.call_async(
+                self._call_llm,
+                **completion_params
+            )
             
             # Extract response
             generated_text = response.choices[0].message.content
@@ -174,6 +201,15 @@ Please provide a comprehensive answer based on the context above. If the context
                 }
             )
             
+        except CircuitBreakerError as e:
+            logger.error(
+                "generation_circuit_breaker_open",
+                model=model_name,
+                error=str(e)
+            )
+            raise GenerationError(
+                f"LLM service for {model_name} is temporarily unavailable. Please try again later."
+            )
         except Exception as e:
             logger.error(
                 "generation_error",
@@ -204,6 +240,7 @@ Please provide a comprehensive answer based on the context above. If the context
             Generated text tokens
         """
         model_name = model_name or settings.default_llm_model
+        circuit_breaker = self._get_circuit_breaker(model_name)
         
         try:
             # Format context
@@ -224,11 +261,30 @@ Please provide a comprehensive answer based on the context above. If the context
                 "stream": True
             }
             
-            # Stream from LLM
-            async for chunk in await acompletion(**completion_params):
+            # Create async wrapper for streaming with circuit breaker
+            async def _stream_with_circuit_breaker():
+                return await circuit_breaker.call_async(
+                    self._call_llm,
+                    **completion_params
+                )
+            
+            # Get the stream
+            stream = await _stream_with_circuit_breaker()
+            
+            # Stream tokens
+            async for chunk in stream:
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
                     
+        except CircuitBreakerError as e:
+            logger.error(
+                "stream_generation_circuit_breaker_open",
+                model=model_name,
+                error=str(e)
+            )
+            raise GenerationError(
+                f"LLM service for {model_name} is temporarily unavailable. Please try again later."
+            )
         except Exception as e:
             logger.error(
                 "stream_generation_error",
@@ -244,6 +300,13 @@ Please provide a comprehensive answer based on the context above. If the context
     def get_available_models(self) -> List[str]:
         """Get list of available models"""
         return list(self.model_configs.keys())
+    
+    def get_circuit_breaker_status(self) -> Dict[str, Any]:
+        """Get circuit breaker status for all LLM providers"""
+        return {
+            provider: breaker.get_stats()
+            for provider, breaker in self.circuit_breakers.items()
+        }
 
 
 # Global instance
