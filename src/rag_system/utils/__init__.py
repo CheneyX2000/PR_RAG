@@ -9,6 +9,14 @@ from .exceptions import (
     RetrievalError,
     GenerationError,
 )
+from .circuit_breaker import (
+    CircuitBreaker,
+    CircuitBreakers,
+    CircuitBreakerError,
+    CircuitBreakerConfig,
+    CircuitState,
+    create_circuit_breaker,
+)
 
 __all__ = [
     "TextChunker",
@@ -18,4 +26,10 @@ __all__ = [
     "EmbeddingError",
     "RetrievalError",
     "GenerationError",
+    "CircuitBreaker",
+    "CircuitBreakers",
+    "CircuitBreakerError",
+    "CircuitBreakerConfig",
+    "CircuitState",
+    "create_circuit_breaker",
 ]
