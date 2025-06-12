@@ -7,6 +7,9 @@ from .schemas import (
     QueryResponse,
     DocumentRequest,
     DocumentResponse,
+    RerankingModelInfo,
+    RerankingStatusResponse,
+    UpdateRerankingRequest,
 )
 
 __all__ = [
@@ -15,4 +18,7 @@ __all__ = [
     "QueryResponse", 
     "DocumentRequest",
     "DocumentResponse",
+    "RerankingModelInfo",
+    "RerankingStatusResponse",
+    "UpdateRerankingRequest",
 ]

@@ -45,13 +45,18 @@ class SearchRequest(BaseModel):
     top_k: Optional[int] = Field(5, ge=1, le=100, description="Number of results to return")
     threshold: Optional[float] = Field(0.0, ge=0.0, le=1.0, description="Minimum similarity threshold")
     filters: Optional[Dict[str, Any]] = Field(None, description="Metadata filters")
+    rerank: Optional[bool] = Field(False, description="Whether to apply reranking")
+    rerank_model: Optional[str] = Field(None, description="Reranking model to use")
+    rerank_top_k: Optional[int] = Field(None, description="Number of results after reranking")
     
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "query": "What is PgVector?",
             "top_k": 5,
             "threshold": 0.7,
-            "filters": {"document_type": "article"}
+            "filters": {"document_type": "article"},
+            "rerank": True,
+            "rerank_model": "ms-marco-MiniLM-L-6-v2"
         }
     })
 
@@ -63,8 +68,8 @@ class SearchResult(BaseModel):
     content: str
     chunk_index: int
     similarity_score: float
+    rerank_score: Optional[float] = Field(None, description="Cross-encoder reranking score")
     metadata: Optional[Dict[str, Any]] = None
-
 
 class SearchResponse(BaseModel):
     """Response model for document search"""
@@ -72,6 +77,33 @@ class SearchResponse(BaseModel):
     results: List[SearchResult]
     total_results: int
 
+class RerankingModelInfo(BaseModel):
+    """Information about a reranking model"""
+    model_name: str
+    batch_size: int
+    max_length: int
+    normalize_scores: bool
+    is_default: bool
+    is_loaded: bool
+
+class RerankingStatusResponse(BaseModel):
+    """Response for reranking status"""
+    enabled: bool
+    default_model: str
+    available_models: Dict[str, RerankingModelInfo]
+
+
+class UpdateRerankingRequest(BaseModel):
+    """Request to update reranking settings"""
+    enabled: bool
+    model: Optional[str] = Field(None, description="Reranking model to use as default")
+    
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "enabled": True,
+            "model": "ms-marco-MiniLM-L-12-v2"
+        }
+    })
 
 class QueryRequest(BaseModel):
     """Request model for RAG query"""
