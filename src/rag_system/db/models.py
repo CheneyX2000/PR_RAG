@@ -1,5 +1,5 @@
 # src/rag_system/db/models.py
-from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, JSON, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -41,15 +41,31 @@ class DocumentChunk(Base):
     document = relationship("Document", back_populates="chunks")
     embeddings = relationship("ChunkEmbedding", back_populates="chunk", cascade="all, delete-orphan")
 
+class EmbeddingModel(Base):
+    """Track embedding models and their dimensions"""
+    __tablename__ = 'embedding_models'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    model_name = Column(String(100), unique=True, nullable=False)
+    dimension = Column(Integer, nullable=False)
+    is_active = Column(Integer, default=1)  # Boolean as Integer for SQLite compatibility
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Constraints
+    __table_args__ = (
+        CheckConstraint('dimension > 0', name='positive_dimension'),
+    )
+
 class ChunkEmbedding(Base):
     __tablename__ = 'chunk_embeddings'
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     chunk_id = Column(UUID(as_uuid=True), ForeignKey('document_chunks.id', ondelete='CASCADE'))
-    model_name = Column(String(100), nullable=False)
+    model_id = Column(UUID(as_uuid=True), ForeignKey('embedding_models.id'))
     embedding_version = Column(Integer, default=1)
-    embedding = Column(Vector(1536))  # Default dimension, will be dynamic
+    # Note: We'll create the vector column dynamically based on model dimension
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
     chunk = relationship("DocumentChunk", back_populates="embeddings")
+    model = relationship("EmbeddingModel")
