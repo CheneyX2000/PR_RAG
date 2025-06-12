@@ -26,8 +26,7 @@ A production-ready RAG (Retrieval-Augmented Generation) system built with Python
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd rag-project
+git clone https://github.com/CheneyX2000/another_RAG.git
 
 # Create virtual environment
 python -m venv venv
@@ -159,7 +158,7 @@ Key configuration options in `.env`:
 | `MAX_CHUNK_SIZE` | Maximum chunk size in tokens | `500` |
 | `RETRIEVAL_TOP_K` | Default number of results | `5` |
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run all tests
@@ -172,7 +171,7 @@ pytest --cov=src/rag_system
 pytest tests/test_retrieval.py -v
 ```
 
-## 🐳 Docker Deployment
+## Docker Deployment
 
 ### Development
 
@@ -186,7 +185,7 @@ docker-compose -f docker-compose.dev.yml up -d
 docker-compose up -d
 ```
 
-## 📊 Monitoring
+## Monitoring
 
 The system includes built-in monitoring with Prometheus metrics:
 
@@ -197,7 +196,7 @@ The system includes built-in monitoring with Prometheus metrics:
 
 Access metrics at: http://localhost:8000/metrics
 
-## 🔄 Model Hot-Switching
+## Model Hot-Switching
 
 Switch embedding models without downtime:
 
@@ -209,7 +208,7 @@ PUT /api/v1/documents/{document_id}/embeddings
 }
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -217,11 +216,11 @@ PUT /api/v1/documents/{document_id}/embeddings
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the Apache2.0 License - see the LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with [LangChain](https://langchain.com/) for RAG orchestration
 - Uses [PgVector](https://github.com/pgvector/pgvector) for vector similarity search

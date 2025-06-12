@@ -7,9 +7,10 @@ from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).parent))
 
-from src.rag_system.db.pgvector import init_database
+from src.rag_system.db.pgvector import init_database, db
 from src.rag_system.services.ingestion import ingestion_service
 from src.rag_system.services.retriever import retriever
+from src.rag_system.services.embeddings import embedding_service
 
 async def main():
     print("🚀 RAG System Quick Start")
@@ -20,6 +21,17 @@ async def main():
     try:
         await init_database()
         print("   ✅ Database initialized successfully!")
+        
+        # Check for dynamic dimension support
+        dimensions = await db.get_supported_dimensions()
+        if dimensions:
+            print(f"   📏 Supported embedding dimensions: {dimensions}")
+        else:
+            print("   ℹ️  Setting up initial embedding models...")
+            # Ensure default models are registered
+            await db.ensure_embedding_model("text-embedding-ada-002", 1536)
+            await db.ensure_embedding_model("all-MiniLM-L6-v2", 384)
+            
     except Exception as e:
         print(f"   ❌ Database initialization failed: {e}")
         print("   Make sure PostgreSQL is running with: docker-compose -f docker-compose.dev.yml up -d")

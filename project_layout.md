@@ -9,26 +9,31 @@ rag-project/
 │       ├── main.py
 │       ├── api/
 │       │   ├── __init__.py
-│       │   ├── routes.py       # FastAPI routes
-│       │   ├── schemas.py      # Pydantic models
-│       │   └── middleware.py   # Rate limiting, auth
+│       │   ├── routes.py                   # FastAPI routes
+│       │   ├── schemas.py                  # Pydantic models
+│       │   └── middleware.py               # Rate limiting, auth
 │       ├── core/
 │       │   ├── __init__.py
-│       │   ├── config.py       # Settings management
-│       │   ├── dependencies.py # Dependency injection
-│       │   └── models.py       # Domain models
+│       │   ├── config.py                   # Settings management
+│       │   ├── dependencies.py             # Dependency injection
+│       │   └── models.py                   # Domain models
 │       ├── services/
 │       │   ├── __init__.py
-│       │   ├── retriever.py    # Document retrieval
-│       │   ├── embeddings.py   # Embedding generation
-|       |   ├── ingestions.py   # Ingesting documents into RAG
-│       │   ├── generator.py    # LLM integration
-│       │   └── cache.py        # Caching layer
+│       │   ├── retriever.py                # Document retrieval
+│       │   ├── embeddings.py               # Embedding generation
+|       |   ├── ingestions.py               # Ingesting documents into RAG
+│       │   ├── generator.py                # LLM integration
+│       │   └── cache.py                    # Caching layer
 │       ├── db/
 │       │   ├── __init__.py
-│       │   ├── pgvector.py     # PgVector operations
-│       │   ├── models.py       # SQLAlchemy models
-│       │   └── migrations/     # Alembic migrations
+│       │   ├── pgvector.py                 # PgVector operations
+│       │   ├── models.py                   # SQLAlchemy models
+│       │   └── migrations/                 # Alembic migrations
+│       │           ├── alembic.ini         # 
+│       │           ├── env.py              # Alembic environment config
+│       │           ├── script.py.mako      # Template for new migrations
+│       │           └── versions/           # All migration files go here
+│       │               └── 001_dynamic_vectors.py  # Our migration file
 │       └── utils/
 │           ├── __init__.py
 │           ├── chunking.py     # Text chunking
