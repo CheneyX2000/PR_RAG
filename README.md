@@ -1,3 +1,5 @@
+# PR_RAG
+A production-ready RAG (Retrieval-Augmented Generation) system built with Python, FastAPI, PgVector, and model hot-switching capabilities.
 # RAG System - Modern Retrieval-Augmented Generation
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -385,7 +387,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [PgVector](https://github.com/pgvector/pgvector) for vector similarity search
-- [FastAPI](https://fastapi.tiangolo.com/) for the modern API framework
-- [LiteLLM](https://github.com/BerriAI/litellm) for unified LLM interface
-- [Sentence Transformers](https://www.sbert.net/) for embedding models
+- Built with [LangChain](https://langchain.com/) for RAG orchestration
+- Uses [PgVector](https://github.com/pgvector/pgvector) for vector similarity search
+- Powered by [FastAPI](https://fastapi.tiangolo.com/) for the API layer
+- LLM integration via [LiteLLM](https://github.com/BerriAI/litellm)
