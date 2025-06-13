@@ -1,4 +1,4 @@
-# another_RAG
+# PR_RAG
 A production-ready RAG (Retrieval-Augmented Generation) system built with Python, FastAPI, PgVector, and model hot-switching capabilities.
 # RAG System - Modern Retrieval-Augmented Generation
 
