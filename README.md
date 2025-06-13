@@ -1,5 +1,5 @@
 # another_RAG
-Yet another RAG in 2025 tech spec
+A production-ready RAG (Retrieval-Augmented Generation) system built with Python, FastAPI, PgVector, and model hot-switching capabilities.
 # RAG System - Modern Retrieval-Augmented Generation
 
 A production-ready RAG (Retrieval-Augmented Generation) system built with Python, FastAPI, PgVector, and model hot-switching capabilities.
