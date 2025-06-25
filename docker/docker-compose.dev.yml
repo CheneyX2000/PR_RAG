@@ -1,50 +1,73 @@
-# docker-compose.dev.yml
+# docker/docker-compose.dev.yml
 version: '3.8'
 
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    container_name: rag_postgres_dev
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=ragdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d ragdb"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ragdb"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - rag_network
   
   redis:
     image: redis:7-alpine
+    container_name: rag_redis_dev
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - rag_network
   
   # Optional: pgAdmin for database management
   pgadmin:
     image: dpage/pgadmin4:latest
+    container_name: rag_pgadmin_dev
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@example.com
       - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
     ports:
       - "5050:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - rag_network
+    profiles:
+      - tools
 
 volumes:
   postgres_data:
+    name: rag_postgres_data_dev
   redis_data:
+    name: rag_redis_data_dev
   pgadmin_data:
+    name: rag_pgadmin_data_dev
+
+networks:
+  rag_network:
+    name: rag_network_dev
+    driver: bridge

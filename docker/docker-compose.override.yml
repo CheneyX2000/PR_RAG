@@ -1,0 +1,40 @@
+# docker-compose.override.yml
+# Override file for local testing of production setup
+# This file is automatically loaded by docker-compose
+# Use: docker-compose up (without -f flag)
+
+version: '3.8'
+
+services:
+  api:
+    # For local testing, expose the API port
+    ports:
+      - "8000:8000"
+    # Mount source code for debugging
+    volumes:
+      - ./src:/app/src:ro
+      - ./data:/app/data
+    # Enable debug logging for local testing
+    environment:
+      - LOG_LEVEL=DEBUG
+      - API_KEY_REQUIRED=false  # Disable auth for local testing
+
+  postgres:
+    # Expose PostgreSQL for local debugging
+    ports:
+      - "5432:5432"
+    # Use simpler password for local testing
+    environment:
+      - POSTGRES_PASSWORD=postgres
+
+  redis:
+    # Expose Redis for local debugging
+    ports:
+      - "6379:6379"
+    # No password for local testing
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+  # Disable nginx by default for local testing
+  nginx:
+    profiles:
+      - never

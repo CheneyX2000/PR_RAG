@@ -1,0 +1,204 @@
+# docker-compose.yml
+# Production configuration for RAG System
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        - BUILD_ENV=production
+    image: rag-system:latest
+    container_name: rag_api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # Application settings
+      - APP_NAME=${APP_NAME:-RAG System}
+      - DEBUG=false
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Database
+      - DATABASE_URL=postgresql://${DB_USER:-raguser}:${DB_PASSWORD:?DB_PASSWORD required}@postgres:5432/${DB_NAME:-ragdb}
+      # Redis
+      - REDIS_URL=redis://redis:6379/0
+      # API Keys (from environment)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:?OPENAI_API_KEY required}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Models
+      - DEFAULT_EMBEDDING_MODEL=${DEFAULT_EMBEDDING_MODEL:-text-embedding-ada-002}
+      - DEFAULT_LLM_MODEL=${DEFAULT_LLM_MODEL:-gpt-4o-mini}
+      # Performance
+      - MAX_WORKERS=${MAX_WORKERS:-4}
+      - CONNECTION_POOL_SIZE=${CONNECTION_POOL_SIZE:-20}
+      # Security
+      - API_KEY_REQUIRED=${API_KEY_REQUIRED:-true}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data:ro  # Read-only in production
+      - app_logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - rag_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: rag_postgres
+    environment:
+      - POSTGRES_USER=${DB_USER:-raguser}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD required}
+      - POSTGRES_DB=${DB_NAME:-ragdb}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=en_US.UTF-8
+      # Performance tuning
+      - POSTGRES_MAX_CONNECTIONS=200
+      - POSTGRES_SHARED_BUFFERS=512MB
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=2GB
+      - POSTGRES_MAINTENANCE_WORK_MEM=128MB
+      - POSTGRES_WORK_MEM=8MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./backups:/backups  # For backup scripts
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-raguser} -d ${DB_NAME:-ragdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rag_network
+    # Don't expose ports in production - access through API only
+    # ports:
+    #   - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: rag_redis
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory ${REDIS_MAX_MEMORY:-512mb}
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-}
+      --tcp-backlog 511
+      --timeout 300
+      --tcp-keepalive 60
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rag_network
+    # Don't expose ports in production
+    # ports:
+    #   - "6379:6379"
+
+  # Optional: Nginx reverse proxy for SSL termination
+  nginx:
+    image: nginx:alpine
+    container_name: rag_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - rag_network
+    profiles:
+      - with-nginx
+
+  # Optional: Prometheus for monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rag_prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - rag_network
+    profiles:
+      - monitoring
+
+  # Optional: Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: rag_grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - rag_network
+    profiles:
+      - monitoring
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_logs:
+    driver: local
+  nginx_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  rag_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
